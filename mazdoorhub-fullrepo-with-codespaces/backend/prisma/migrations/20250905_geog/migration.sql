@@ -1,7 +1,5 @@
--- Ensure PostGIS
 CREATE EXTENSION IF NOT EXISTS postgis;
 
--- Add geography column to WorkerProfile
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -13,7 +11,6 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS worker_location_gix ON "WorkerProfile" USING GIST (location);
 
--- Auto-sync geography from lat/lon
 CREATE OR REPLACE FUNCTION set_worker_geog()
 RETURNS trigger AS $$
 BEGIN
