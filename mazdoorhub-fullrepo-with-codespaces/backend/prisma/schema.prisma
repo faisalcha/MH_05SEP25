@@ -1,0 +1,97 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  role      Role
+  name      String?
+  photoUrl  String?
+  city      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employer EmployerProfile?
+  worker   WorkerProfile?
+
+  ratingsGiven Rating[] @relation("ratingsGiven")
+  ratingsRecv  Rating[] @relation("ratingsRecv")
+
+  jobsEmployer Job[]    @relation("jobsEmployer")
+  jobsWorker   Job[]    @relation("jobsWorker")
+}
+
+enum Role { EMPLOYER WORKER ADMIN }
+
+model EmployerProfile {
+  id       String @id @default(uuid())
+  userId   String @unique
+  address  String?
+  user     User   @relation(fields: [userId], references: [id])
+}
+
+model WorkerProfile {
+  id           String  @id @default(uuid())
+  userId       String  @unique
+  skills       String
+  isAvailable  Boolean @default(true)
+  lastSeenAt   DateTime @default(now())
+  lat          Float?
+  lon          Float?
+  kycStatus    KycStatus @default(PENDING)
+  cnicImageUrl String?
+  user         User @relation(fields: [userId], references: [id])
+}
+
+enum KycStatus { PENDING VERIFIED REJECTED }
+
+model Job {
+  id        String   @id @default(uuid())
+  title     String
+  desc      String?
+  city      String?
+  employerId String
+  workerId   String?
+  status     JobStatus @default(REQUESTED)
+
+  escrowAmountPkr Float    @default(0)
+  escrowStatus    String   @default("none")
+  paymentMethod   String   @default("none")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employer User @relation("jobsEmployer", fields: [employerId], references: [id])
+  worker   User? @relation("jobsWorker", fields: [workerId], references: [id])
+}
+
+enum JobStatus { REQUESTED ACCEPTED IN_PROGRESS DONE CANCELLED }
+
+model WalletLedger {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String?
+  type      String
+  amountPkr Float
+  meta      Json?
+  createdAt DateTime @default(now())
+  user   User @relation(fields: [userId], references: [id])
+  job    Job? @relation(fields: [jobId], references: [id])
+}
+
+model Rating {
+  id       String   @id @default(uuid())
+  raterId  String
+  rateeId  String
+  jobId    String
+  stars    Int
+  comment  String?
+  createdAt DateTime @default(now())
+
+  rater User @relation("ratingsGiven", fields: [raterId], references: [id])
+  ratee User @relation("ratingsRecv",  fields: [rateeId], references: [id])
+  job   Job  @relation(fields: [jobId], references: [id])
+
+  @@unique([raterId, jobId])
+  @@index([rateeId, createdAt])
+}
